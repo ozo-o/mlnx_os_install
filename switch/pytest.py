@@ -1,9 +1,10 @@
 
 import json
 
-from mlxe2e.mlnx_os_upgrade.switch.switch_connection import SwitchConnection, BadImageName
 import time
 import pytest
+from mlxe2e.mlnx_os_upgrade.switch.switch_connection import SwitchConnection, BadImageName, ImageAlreadyExist, \
+    VersionAlreadyInstalled
 
 
 def test_reboot():
@@ -50,7 +51,23 @@ def test_bad_image_name():
     image_path = "/tmp/"
     switch = SwitchConnection('egl-zeus-05')
     with pytest.raises(BadImageName):
-        image_fetch_result, show_image_result = switch.image_fetch(image_path, image_name, "10.130.14.9", "3tango")
+        switch.image_fetch(image_path, image_name, "10.130.14.9", "3tango")
+
+
+def test_image_already_exist():
+    image_name = "image-X86_64-3.9.2400.img"
+    image_path = "/tmp/"
+    switch = SwitchConnection('egl-zeus-05')
+    with pytest.raises(ImageAlreadyExist):
+        switch.image_fetch(image_path, image_name, "10.130.14.9", "3tango")
+
+
+def test_image_already_installed():
+    image_name = "image-X86_64-3.9.2400.img"
+    switch = SwitchConnection('egl-zeus-05')
+    with pytest.raises(VersionAlreadyInstalled):
+        switch.image_install(image_name)
+
 
 def test_connection_establish():
     pass
