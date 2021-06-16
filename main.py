@@ -51,6 +51,7 @@ def main():
     sw = SwitchConnection(switch_name=args.switch_name, switch_ip=args.switch_ip,
                           username=args.switch_username, password=args.switch_password)
     switch_version_before_installation = sw.switch_version()
+    rc = 0
     try:
         if args.fetch:
             sw.image_fetch(args.image_path, args.image_name, args.master_ip, args.master_password)
@@ -75,8 +76,8 @@ def main():
         if version not in args.image_name:
             raise FailedToInstallImage("switch version is not as the required image")
     except FailedToInstallImage as e:
+        rc = 1
         logging.info(f"Failed to install image\nException: {e}")
-        raise
 
     finally:
         sw.cleanup()
@@ -85,7 +86,8 @@ def main():
         'Current version on switch': version,
         'Version before installation': switch_version_before_installation,
     }
-    return status
+    logging.info(status)
+    return rc
 
 
 if __name__ == "__main__":
