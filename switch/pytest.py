@@ -1,7 +1,7 @@
 
 import json
 
-from mlxe2e.mlnx_os_upgrade.switch.switch_connection import SwitchConnection, BadImageName
+from switch_connection import SwitchConnection, BadImageName
 import time
 import pytest
 
