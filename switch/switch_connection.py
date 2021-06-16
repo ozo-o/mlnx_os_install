@@ -8,11 +8,20 @@ from netmiko import ConnectHandler
 import json
 import time
 
+
 class BadImageName(Exception):
     pass
 
 
 class FailedToInstallImage(Exception):
+    pass
+
+
+class ImageAlreadyExist(Exception):
+    pass
+
+
+class VersionAlreadyInstalled(Exception):
     pass
 
 
@@ -25,7 +34,6 @@ class SwitchConnection:
         self.switch_name = switch_name
         self.switch_ip = switch_ip
 
-        # {'device_type': 'mellanox', 'host': 'egl-zeus-05', 'username': 'admin', 'password': 'admin'}
         mellanox_config = {
                            'device_type': 'mellanox',
                            'host': self.switch_name if self.switch_name else self.switch_ip,
@@ -45,23 +53,31 @@ class SwitchConnection:
         image fetch scp://root:password@server/path_to_file/image-X86_64 3.9.0454.img
         :return:
         """
-        cmd = f"image fetch scp://root:{password}@{server}{image_path}{image_name}"
-        image_fetch_result = self.conn.send_command(cmd, delay_factor=5)
-        cmd = f"show images | include Image | include {image_name}"
-        show_image_result = self.conn.send_command(cmd)
+        check_img_cmd = f"show images | include Image | include {image_name}"
+        show_image_before_fetch = self.conn.send_command(check_img_cmd)
+        if image_name in show_image_before_fetch.strip():
+            raise ImageAlreadyExist('Image is already exist')
 
-        if show_image_result.strip() == '':
+        fetch_cmd = f"image fetch scp://root:{password}@{server}{image_path}{image_name}"
+        image_fetch_result = self.conn.send_command(fetch_cmd, delay_factor=10)
+        show_image_after_fetch = self.conn.send_command(check_img_cmd)
+
+        if show_image_after_fetch.strip() == '':
             raise BadImageName(f'Failed to load image: {image_path}{image_name}\noutput: {image_fetch_result}')
 
-        return image_fetch_result, show_image_result.strip()
+        return image_fetch_result, show_image_after_fetch.strip()
 
     def image_install(self, image_name: str) -> str:
         """
         image install image-X86_64 3.9.0454.img
         :return:
         """
+        switch_version = self.switch_version()
+        if switch_version in image_name:
+            raise VersionAlreadyInstalled('Image is installed')
+
         cmd = f"image install {image_name}"
-        result = self.conn.send_command(cmd, delay_factor=5)
+        result = self.conn.send_command(cmd, delay_factor=10)
         return result
 
     def switch_version(self) -> str:

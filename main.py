@@ -2,8 +2,15 @@
 
 import argparse
 import sys
+from ssl import socket_error
 
-from switch.switch_connection import SwitchConnection, FailedToInstallImage
+# from mlxe2e.mlnx_os_upgrade.switch.switch_connection import
+from switch.switch_connection import SwitchConnection, FailedToInstallImage, ImageAlreadyExist, VersionAlreadyInstalled
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+
 def get_args():
     """
     add and parse program arguments
@@ -24,10 +31,10 @@ def get_args():
 
     try:
         args_obj = parser.parse_args()
-        # breakpoint()
-        if args_obj.install is True and args_obj.image_name is None or args_obj.image_path is None:
+        if args_obj.install is True and args_obj.image_name is None:
             parser.error('--install can only be used when image-path and image-name are provided.')
-        if args_obj.fetch is True and args_obj.master_ip is None or args_obj.master_password is None:
+        if args_obj.fetch is True and args_obj.master_ip is None or args_obj.master_password is None or\
+                args_obj.image_path is None:
             parser.error('--fetch can only be used when master-ip and master-password are provided.')
 
 
@@ -43,21 +50,42 @@ def main():
     args = get_args()
     sw = SwitchConnection(switch_name=args.switch_name, switch_ip=args.switch_ip,
                           username=args.switch_username, password=args.switch_password)
+    switch_version_before_installation = sw.switch_version()
     try:
         if args.fetch:
             sw.image_fetch(args.image_path, args.image_name, args.master_ip, args.master_password)
+    except ImageAlreadyExist as e:
+        logging.info(f'{e}')
+
+    try:
         if args.install:
             sw.image_install(image_name=args.image_name)
             sw.save_configuration()
             sw.reload()
+    except VersionAlreadyInstalled as e:
+        logging.info(f'{e}')
+
+    try:
+        sw.switch_version()
+    except socket_error as e:
+        logging.info('Connection is closed duo to reboot')
         sw = SwitchConnection(switch_name=args.switch_name, switch_ip=args.switch_ip)
+    try:
         version = sw.switch_version()
         if version not in args.image_name:
             raise FailedToInstallImage("switch version is not as the required image")
-    except Exception as e:
-        print(f"Failed to install image\nException: {e}")
+    except FailedToInstallImage as e:
+        logging.info(f"Failed to install image\nException: {e}")
+        raise
+
     finally:
         sw.cleanup()
+    status = {
+        'Image name requested': args.image_name,
+        'Current version on switch': version,
+        'Version before installation': switch_version_before_installation,
+    }
+    return status
 
 
 if __name__ == "__main__":
