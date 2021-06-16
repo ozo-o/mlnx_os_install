@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from ..switch.switch_connection import SwitchConnection, FailedToInstallImage
+from switch.switch_connection import SwitchConnection, FailedToInstallImage
 def get_args():
     """
     add and parse program arguments
