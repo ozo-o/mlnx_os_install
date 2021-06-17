@@ -48,14 +48,14 @@ class SwitchConnection:
         result = self.conn.send_command(command)
         return result
 
-    def image_fetch(self, image_path: str, image_name: str, server: str, password: str):
+    def image_fetch(self, image_path: str, image_name: str, server: str, password: str, force: bool = False):
         """
         image fetch scp://root:password@server/path_to_file/image-X86_64 3.9.0454.img
         :return:
         """
         check_img_cmd = f"show images | include Image | include {image_name}"
         show_image_before_fetch = self.conn.send_command(check_img_cmd)
-        if image_name in show_image_before_fetch.strip():
+        if image_name in show_image_before_fetch.strip() and not force:
             raise ImageAlreadyExist('Image is already exist')
 
         fetch_cmd = f"image fetch scp://root:{password}@{server}{image_path}{image_name}"
@@ -67,13 +67,13 @@ class SwitchConnection:
 
         return image_fetch_result, show_image_after_fetch.strip()
 
-    def image_install(self, image_name: str) -> str:
+    def image_install(self, image_name: str, force: bool = False) -> str:
         """
         image install image-X86_64 3.9.0454.img
         :return:
         """
         switch_version = self.switch_version()
-        if switch_version in image_name:
+        if switch_version in image_name and not force:
             raise VersionAlreadyInstalled('Image is installed')
 
         cmd = f"image install {image_name}"

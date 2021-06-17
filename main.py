@@ -8,13 +8,14 @@ from ssl import socket_error
 from switch.switch_connection import SwitchConnection, FailedToInstallImage, ImageAlreadyExist, VersionAlreadyInstalled
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 
 def get_args():
     """
     add and parse program arguments
     """
+    args_obj = None
     parser = argparse.ArgumentParser(description='This tool is for installing mellanox-os')
     parser.add_argument('-s', '--switch-name', help='Switch name to connect', required=True)
     parser.add_argument('-u', '--switch-username', help='Switch name to connect', default='admin')
@@ -22,12 +23,14 @@ def get_args():
     parser.add_argument('-i', '--switch_ip', help='Switch ip to connect')
     parser.add_argument('-b', '--install', action='store_true', help='Install mellanox-os')
     parser.add_argument('-d', '--fetch', action='store_true', help='fetch mellanox-os')
+    parser.add_argument('-f', '--force', action='store_true', help='force fetch and install')
 
     parser.add_argument('-l', '--image-path',  help='image path location')
     parser.add_argument('-n', '--image-name', help='image name')
 
     parser.add_argument('-m', '--master-ip', help='master ip to fetch the image from')
     parser.add_argument('-p', '--master-password', help='master password to connect from the switch')
+    parser.add_argument('-v', '--verbosity', help='increase output verbosity')
 
     try:
         args_obj = parser.parse_args()
@@ -36,7 +39,6 @@ def get_args():
         if args_obj.fetch is True and args_obj.master_ip is None or args_obj.master_password is None or\
                 args_obj.image_path is None:
             parser.error('--fetch can only be used when master-ip and master-password are provided.')
-
 
     except IOError as exc:
         parser.error(str(exc))
@@ -54,13 +56,13 @@ def main():
     rc = 0
     try:
         if args.fetch:
-            sw.image_fetch(args.image_path, args.image_name, args.master_ip, args.master_password)
+            sw.image_fetch(args.image_path, args.image_name, args.master_ip, args.master_password, force=args.force)
     except ImageAlreadyExist as e:
         logging.info(f'{e}')
 
     try:
         if args.install:
-            sw.image_install(image_name=args.image_name)
+            sw.image_install(image_name=args.image_name, force=args.force)
             sw.save_configuration()
             sw.reload()
     except VersionAlreadyInstalled as e:
