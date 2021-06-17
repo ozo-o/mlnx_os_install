@@ -3,7 +3,7 @@ from setuptools import setup
 
 install_requires = [
     'netmiko>=3.4.0',
-    'setuptools_rust'
+    'setuptools'
 ]
 
 general_scripts = [
